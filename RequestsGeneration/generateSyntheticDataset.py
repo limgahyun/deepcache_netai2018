@@ -1,73 +1,47 @@
 """
                            DeepCache
                
-DeepCache is distributed under the following BSD 3-Clause License:
+DeepCache는 다음 BSD 3-Clause License에 따라 배포됩니다:
 
 Copyright(c) 2019
                 University of Minensota - Twin Cities
         Authors: Arvind Narayanan, Saurabh Verma, Eman Ramadan, Pariya Babaie, and Zhi-Li Zhang
 
-All rights reserved.
+모든 권리 보유.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+소스 및 바이너리 형태로 재배포 및 사용은 다음 조건을 충족하는 경우에 허용됩니다:
 
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
+1. 소스 코드의 재배포는 위의 저작권 고지, 이 조건 목록 및 다음 면책 조항을 유지해야 합니다.
 
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
+2. 바이너리 형태로의 재배포는 위의 저작권 고지, 이 조건 목록 및 다음 면책 조항을 문서 및/또는 배포와 함께 제공되는 기타 자료에 포함해야 합니다.
 
-3. Neither the name of the copyright holder nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
+3. 저작권 보유자의 이름이나 기여자의 이름은 사전 서면 허가 없이 이 소프트웨어에서 파생된 제품을 홍보하거나 보증하는 데 사용될 수 없습니다.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+이 소프트웨어는 저작권 보유자 및 기여자에 의해 "있는 그대로" 제공되며, 상품성 및 특정 목적에 대한 적합성에 대한 묵시적 보증을 포함하되 이에 국한되지 않는 명시적 또는 묵시적 보증 없이 제공됩니다. 저작권 보유자 또는 기여자는 이 소프트웨어의 사용으로 인해 발생하는 직접적, 간접적, 부수적, 특별, 모범적 또는 결과적 손해(대체 상품 또는 서비스의 조달, 사용 손실, 데이터 또는 이익 손실, 또는 비즈니스 중단 포함)에 대해 책임을 지지 않습니다.
 
 @author: Eman Ramadan (eman@cs.umn.edu) & Pariya Babaie (babai008@umn.edu)
 
+설명:
+    이 코드는 여러 세션에서 객체의 인기와 요청 간격 분포가 변경되는 합성 데이터를 생성합니다.
 
-DESCRIPTION:
-    This code generates a synthetic dataset which has multiple sessions in which the object popularity and the request
-    interarrival distribution changes from one session to another.
+입력:
+    - alphaSet: 각 세션에 대한 객체 인기 Zipf 분포 값.
+    - NUM_OF_OBJECTS: 세션당 요청 생성에 사용되는 객체 수, Object_ID는 1부터 NUM_OF_OBJECTS까지.
+    - NUM_OF_REQUESTS_PER_SESSION: 세션당 요청 수.
+    총 요청 수는 num_of_sessions * NUM_OF_REQUESTS_PER_SESSION과 대략 동일합니다.
+    이러한 입력은 하드코딩되어 있으므로 스크립트에 인수를 전달할 필요가 없습니다. 직접 실행할 수 있습니다.
+    {initialization} 섹션(Line 45)에서 이러한 매개변수를 수정할 수 있습니다.
 
+흐름:
+    1- alpha 세트의 각 값에 대해 'NUM_OF_REQUESTS_PER_SESSION' 요청이 각 세션에서 생성됩니다.
+    2- 객체의 순위(따라서 인기도)가 각 세션에서 순열화됩니다. 즉, 첫 번째 세션에서 인기가 있는 객체는 두 번째 세션에서 다른 인기를 가질 수 있습니다. 간격 분포도 세션마다 다릅니다.
+    3- 각 세션에서 각 객체에 대한 요청 세트가 생성되고 이전에 생성된 요청에 추가됩니다.
+    4- 모든 요청은 요청 시간에 따라 정렬된 객체 ID와 요청 시간을 포함하는 데이터 프레임에 저장됩니다.
 
-INPUT:
-    - alphaSet: values for object popularity Zipf distribution for each session.
-    - NUM_OF_OBJECTS: number of objects for request generation per session, Object_ID from 1 to NUM_OF_OBJECTS
-    - NUM_OF_REQUESTS_PER_SESSION: number of requests per session
-    Total number of requests generated approx. equals num_of_sessions * NUM_OF_REQUESTS_PER_SESSION
-    These inputs are hard coded, so no need to send any arguments to the script, you can run it directly.
-    You can modify these parameters in the {initialization} section @Line 45
-
-
-FLOW:
-    1- For each value of alpha in the alpha set, 'NUM_OF_REQUESTS_PER_SESSION' requests are generated in each session.
-    2- The rank of objects (and hence their popularity) are permutated in each session which means an object which is
-       popular in the first session may have a different popularity in the second session and so on. The interarrival
-       distribution also varies from one session to the other.
-    3- At each session a set of requests for each object are generated and are appended to the
-       previously generated requests.
-    4- All requests are stored in a data frame which contains object IDs to be requested and their request request_time,
-       sorted by the request_time.
-
-
-OUTPUT:
-    The output is generated in '../Datasets' directory with the name:
+출력:
+    출력은 '../Datasets' 디렉토리에 다음 이름으로 생성됩니다:
      'syntheticDataset_O{NUM_OF_OBJECTS}.csv'
-    the requests file contains object_IDs to be requested and their request_time.
-
+    요청 파일에는 요청될 객체 ID와 요청 시간이 포함됩니다.
 """
 
 from __future__ import print_function
@@ -78,90 +52,95 @@ import numpy as np
 import pandas as pd
 
 
-""""###########################  initialization  ####################################################################"""
-alphaSet = [0.8, 1, 0.5, 0.7, 1.2, 0.6]
-NUM_OF_OBJECTS = 50
-NUM_OF_REQUESTS_PER_SESSION = 50000
+""""###########################  초기화  ####################################################################"""
+alphaSet = [0.8, 1, 0.5, 0.7, 1.2, 0.6]  # 각 세션에 대한 Zipf 분포의 alpha 값
+NUM_OF_OBJECTS = 50  # 요청 생성에 사용되는 객체 수
+NUM_OF_REQUESTS_PER_SESSION = 50000  # 세션당 요청 수
 
-OUTPUTDIR = '../Datasets'
-OUTPUTFILENAME = '{}/syntheticDataset_O{}.csv'.format(OUTPUTDIR, NUM_OF_OBJECTS)
+OUTPUTDIR = '../Datasets'  # 출력 파일이 저장될 디렉토리
+OUTPUTFILENAME = '{}/syntheticDataset_O{}.csv'.format(OUTPUTDIR, NUM_OF_OBJECTS)  # 출력 파일 이름
 if not os.path.isdir(OUTPUTDIR):
     os.mkdir(OUTPUTDIR)
 
 
 def generate_requests():
-    print('Generating Requests for Dataset ...')
+    """
+    요청 데이터를 생성하는 함수.
+    각 세션에 대해 객체의 순위와 요청 간격 분포를 변경하며 요청 데이터를 생성합니다.
+    """
+    print('데이터셋 요청 생성 중...')
     for i in range(len(alphaSet)):
-        print('Processing Session Num {} out of {} Sessions'.format(i + 1, len(alphaSet)))
+        print('세션 번호 {} / {} 처리 중'.format(i + 1, len(alphaSet)))
         alpha = alphaSet[i]
 
-        # selecting the distribution randomly for this session
+        # 세션별로 분포를 무작위로 선택 (Poisson 또는 Pareto)
         if random.randint(1, 2) % 2 == 0:
-            dist = 'P'    # Poisson distribution
+            dist = 'P'    # Poisson 분포
         else:
-            dist = 'R'    # Pareto distribution
+            dist = 'R'    # Pareto 분포
 
         if i != 0:
-            # New Rank permutation used to change objects rank from one session to another
+            # 새로운 순위 순열을 사용하여 객체 순위를 변경
             perm = np.random.permutation(NUM_OF_OBJECTS) + 1
 
-        print('Alpha = {}, distribution is {}'.format(alpha, 'Poisson' if dist == 'P' else 'Pareto'))
-        requests = generate_session_requests(alpha, dist)     # returned requests are object_ID,request_time
+        print('Alpha = {}, 분포 = {}'.format(alpha, 'Poisson' if dist == 'P' else 'Pareto'))
+        requests = generate_session_requests(alpha, dist)  # 요청 데이터 생성 (객체 ID, 요청 시간 반환)
 
         df = pd.DataFrame(requests, columns=['requests'])
-        # split the requests into two columns object_ID and request_time
+        # 요청 데이터를 두 개의 열(object_ID, request_time)로 분리
         parts = df["requests"].str.split(",", expand=True)
 
-        # making separate object id column from new data frame
+        # 객체 ID 열 생성
         df["object_ID"] = parts[0]
         df["object_ID"] = df["object_ID"].astype(int)
 
-        # making separate request timestamp column from new data frame
+        # 요청 시간 열 생성
         df["request_time"] = parts[1]
         df["request_time"] = df["request_time"].astype(float)
 
         if i == 0:
             requestsdf = df[['object_ID', 'request_time']].copy(deep=True)
         else:
-            # The following code is used to permutate the rank of each object in the current session
-            for cur_obj_id in df.groupby('object_ID').groups.keys():  # cur_obj_id: from 1 to NUM_OF_OBJECTS
+            # 현재 세션에서 각 객체의 순위를 순열화
+            for cur_obj_id in df.groupby('object_ID').groups.keys():  # cur_obj_id: 1부터 NUM_OF_OBJECTS까지
                 new_obj_id = perm[cur_obj_id - 1]
-                # replace the cur_obj_id with the new_obj_id
+                # 현재 객체 ID를 새로운 객체 ID로 대체
                 new_obj_id_col = np.full((len(df.groupby('object_ID').groups[cur_obj_id])), new_obj_id)
 
-                # adjust the generated request_times to start from the last request_time of the new_obj_id from
-                # the previous session
+                # 이전 세션의 마지막 요청 시간부터 시작하도록 요청 시간 조정
                 last_req_time = lastReqs.loc[lastReqs['object_ID'] == cur_obj_id]['request_time_max'].tolist()[0]
                 new_request_times_col = df.loc[df['object_ID'] == cur_obj_id, ['request_time']] + last_req_time
                 new_request_times_col = new_request_times_col['request_time'].tolist()
 
-                # create a tmp data frame for this object
+                # 이 객체에 대한 임시 데이터 프레임 생성
                 tmp_df = pd.DataFrame({'object_ID': new_obj_id_col, 'request_time': new_request_times_col})
 
-                # merge the tmp data frame for this object with existing requests
+                # 기존 요청 데이터와 병합
                 requestsdf = requestsdf.append(tmp_df, ignore_index=True)
 
-        # get the last request_time for each object_id to be used for the next session
+        # 다음 세션을 위해 각 객체 ID의 마지막 요청 시간을 가져옴
         lastReqs = requestsdf.groupby(['object_ID']).agg({'request_time': ['max']})
-        # flatten the lastReqs column names after grouping
+        # 그룹화 후 열 이름 평탄화
         lastReqs.columns = ['_'.join(col).strip() for col in lastReqs.columns.values]
         lastReqs['object_ID'] = lastReqs.index
-        # now lastReqs data frame has each object_ID and its request_time_max (when it was last requested)
+        # 이제 lastReqs 데이터 프레임에는 각 객체 ID와 마지막 요청 시간이 포함됨
 
-    # sort all requests for all objects by request_time
+    # 모든 요청 데이터를 요청 시간에 따라 정렬
     requestsdf.sort_values('request_time', ascending=True, inplace=True)
 
+    # 결과를 CSV 파일로 저장
     f = open(OUTPUTFILENAME, 'w')
     requestsdf.to_csv(f, header=True, index=False)
     f.close()
-    print('Synthetic Dataset Saved to Output file: {}'.format(OUTPUTFILENAME))
+    print('합성 데이터셋이 출력 파일에 저장되었습니다: {}'.format(OUTPUTFILENAME))
     del requestsdf
 
 
-"""###########################  Object Popularity  ##################################################################"""
+"""###########################  객체 인기 생성  ##################################################################"""
 def generate_object_popularity_zipf(zipalpha):
     """
-    Generate Zipf distribution for object popularity
+    Zipf 분포를 사용하여 객체의 인기도를 생성하는 함수.
+    zipalpha: Zipf 분포의 alpha 값.
     """
     N = NUM_OF_OBJECTS
     denom = 0.0
@@ -177,20 +156,19 @@ def generate_object_popularity_zipf(zipalpha):
     return objects_zipf_pdf
 
 
-"""###########################  Session Requests  ###################################################################"""
+"""###########################  세션 요청 생성  ###################################################################"""
 def generate_session_requests(zipalpha, distr):
     """
-    Generate interarrival times following either the poisson or pareto distributions
+    세션 요청 데이터를 생성하는 함수.
+    zipalpha: Zipf 분포의 alpha 값.
+    distr: 요청 간격 분포 (Poisson 또는 Pareto).
     """
-    # For each object generate lambda_i * num_of_requests according to their interarrival distribution
-    # Then merge these requests for all objects with respect to their request time
-
     requests = []
 
-    # generating object popularity
+    # 객체 인기도 생성
     objects_zipf_pdf = generate_object_popularity_zipf(zipalpha)
 
-    # Calculating the maximum simulation time by generating the required number of requests for the least popular object
+    # 최소 인기 객체에 대한 요청 수를 기반으로 최대 시뮬레이션 시간 계산
     simulation_time_end = 0
     N = NUM_OF_OBJECTS - 1
     reqs_N = int(math.ceil(objects_zipf_pdf[N][1] * NUM_OF_REQUESTS_PER_SESSION))
@@ -208,7 +186,7 @@ def generate_session_requests(zipalpha, distr):
         req_str = str(N+1) + ',' + str(cur_t)
         requests.append(req_str)
 
-    # generate the requests for the other N-1 objects, and stop when the time exceeds the simulation time
+    # 나머지 객체에 대한 요청 생성
     for i in range(NUM_OF_OBJECTS - 1):
         cur_t = 0
         while cur_t < simulation_time_end:
@@ -227,16 +205,20 @@ def generate_session_requests(zipalpha, distr):
 
 def generate_poisson_distribution_from_CDF(rand, lambda_poisson):
     """
-    Generate numbers following Poisson distribution using its CDF and a random number uniformly generated
+    Poisson 분포를 사용하여 숫자를 생성하는 함수.
+    rand: 0과 1 사이의 난수.
+    lambda_poisson: Poisson 분포의 lambda 값.
     """
     return -1 * (math.log(1-rand))/lambda_poisson
 
 
 def generate_pareto_distribution_from_CDF(rand, lambda_pareto):
     """
-    Generate numbers following Pareto distribution using its CDF and a random number uniformly generated
+    Pareto 분포를 사용하여 숫자를 생성하는 함수.
+    rand: 0과 1 사이의 난수.
+    lambda_pareto: Pareto 분포의 lambda 값.
     """
-    # We use beta = 2 (Pareto Parameter from distribution)
+    # Pareto 분포의 beta 값은 2로 설정
     return (1/math.sqrt(1-rand) - 1)/lambda_pareto
 
 
