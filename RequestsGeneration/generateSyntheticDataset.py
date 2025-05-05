@@ -54,6 +54,26 @@ import pandas as pd
 
 """"###########################  초기화  ####################################################################"""
 alphaSet = [0.8, 1, 0.5, 0.7, 1.2, 0.6]  # 각 세션에 대한 Zipf 분포의 alpha 값
+"""
+Zipf 분포란?
+Zipf 분포는 데이터의 인기 분포를 모델링하는 데 자주 사용되는 확률 분포입니다. 주로 웹 트래픽, 캐싱 시스템, 검색 엔진 등에서 특정 항목(예: 파일, 웹 페이지, 객체 등)의 인기 정도를 나타내는 데 사용됩니다. Zipf 분포의 특징은 소수의 항목이 매우 높은 인기를 가지며, 나머지 항목은 상대적으로 낮은 인기를 가지는 분포를 나타냅니다.
+
+alpha 값의 역할
+alpha 값은 Zipf 분포의 기울기를 결정하는 매개변수입니다.
+alpha 값이 클수록 인기 있는 항목과 그렇지 않은 항목 간의 격차가 커집니다. 즉, 상위 몇 개 항목이 전체 요청의 대부분을 차지하게 됩니다.
+alpha 값이 작을수록 항목 간의 인기도 차이가 줄어들어 더 균등한 분포를 보입니다.
+alphaSet의 의미
+alphaSet은 여러 세션에서 사용할 Zipf 분포의 alpha 값을 정의한 것으로, 각 세션마다 다른 alpha 값을 사용하여 다양한 인기 분포를 시뮬레이션합니다.
+
+예를 들어:
+
+첫 번째 세션에서는 alpha = 0.8을 사용하여 비교적 균등한 분포를 생성합니다.
+두 번째 세션에서는 alpha = 1을 사용하여 약간 더 집중된 분포를 생성합니다.
+세 번째 세션에서는 alpha = 0.5로 더 균등한 분포를 생성합니다.
+이렇게 각 세션마다 다른 alpha 값을 사용하여 다양한 요청 패턴을 모델링합니다.
+
+이러한 다양한 alpha 값은 실제 시스템에서 발생할 수 있는 다양한 요청 패턴을 시뮬레이션하는 데 유용합니다. 예를 들어, 웹 서버의 요청 패턴은 시간에 따라 변화할 수 있으며, 이러한 변화는 Zipf 분포의 alpha 값으로 모델링할 수 있습니다. 따라서 alphaSet은 다양한 요청 패턴을 생성하기 위한 매개변수 집합으로 이해할 수 있습니다.
+"""
 NUM_OF_OBJECTS = 50  # 요청 생성에 사용되는 객체 수
 NUM_OF_REQUESTS_PER_SESSION = 50000  # 세션당 요청 수
 
@@ -82,10 +102,13 @@ def generate_requests():
 
         # 세션별로 분포를 무작위로 선택 (Poisson 또는 Pareto)
         if random.randint(1, 2) % 2 == 0:
-            dist = 'P'    # Poisson 분포
+            dist = 'P'    # Poisson 분포 : 단위 시간 안에 어떤 사건이 몇 번 발생할 것인지를 표현하는 이산 확률 분포
         else:
-            dist = 'R'    # Pareto 분포
+            dist = 'R'    # Pareto 분포 : 특정 사건이 발생할 확률을 나타내는 연속 확률 분포
 
+        # 첫 번째 세션에서는 객체 순위를 무작위로 변경하지 않음
+        # 두 번째 세션부터는 객체 순위를 무작위로 변경
+        # 각 객체의 순위를 무작위로 변경하기 위해 1부터 NUM_OF_OBJECTS까지의 정수 배열을 생성
         if i != 0:
             # 새로운 순위 순열을 사용하여 객체 순위를 변경
             perm = np.random.permutation(NUM_OF_OBJECTS) + 1
@@ -105,21 +128,35 @@ def generate_requests():
         df["request_time"] = parts[1]
         df["request_time"] = df["request_time"].astype(float)
 
+        # 첫 번째 세션에 대해 요청 데이터 초기화
+        # 첫 번째 세션에서는 이전 세션의 요청 데이터가 없으므로 요청데이터를 바로 requestsdf에 저장
+        # 이후 세션에서는 이전 세션의 마지막 요청 시간 이후부터 시작하도록 요청 시간 조정
         if i == 0:
-            requestsdf = df[['object_ID', 'request_time']].copy(deep=True)
+            # df는 현재 세션에서 생성된 요청 데이터를 담고 있는 데이터프레임
+            # requestsdf는 모든 세션의 요청 데이터를 누적해서 저장하는 데이터프레임
+            # 깊은 복사로 requestsdf를 생성하면, df와 독립적으로 데이터 수정 가능
+            requestsdf = df[['object_ID', 'request_time']].copy(deep=True) 
         else:
             # 현재 세션에서 각 객체의 순위를 순열화
             for cur_obj_id in df.groupby('object_ID').groups.keys():  # cur_obj_id: 1부터 NUM_OF_OBJECTS까지
                 new_obj_id = perm[cur_obj_id - 1]
                 # 현재 객체 ID를 새로운 객체 ID로 대체
-                new_obj_id_col = np.full((len(df.groupby('object_ID').groups[cur_obj_id])), new_obj_id)
+                new_obj_id_col = np.full((len(df.groupby('object_ID').groups[cur_obj_id])), new_obj_id) # 길이가 len(df.groupby('object_ID').groups[cur_obj_id])인 배열을 생성하고, 모든 요소를 new_obj_id로 채움
 
                 # 이전 세션의 마지막 요청 시간부터 시작하도록 요청 시간 조정
+                # lastReqs 데이터프레임에서 현재 객체 ID(cur_obj_id)에 해당하는 마지막 요청 시간을 가져옴
                 last_req_time = lastReqs.loc[lastReqs['object_ID'] == cur_obj_id]['request_time_max'].tolist()[0]
+
+                # 현재 세션의 요청 시간에 이전 세션의 마지막 요청 시간을 더해 새로운 요청 시간을 계산
+                # df는 현재 세션의 요청 데이터를 담고 있는 데이터프레임
+                # df.loc[df['object_ID'] == cur_obj_id, ['request_time']]은 현재 객체 ID(cur_obj_id)에 해당하는 요청 시간 데이터를 선택
                 new_request_times_col = df.loc[df['object_ID'] == cur_obj_id, ['request_time']] + last_req_time
+                # 새로운 요청 시간 컬럼을 리스트로 변환
                 new_request_times_col = new_request_times_col['request_time'].tolist()
 
                 # 이 객체에 대한 임시 데이터 프레임 생성
+                # new_obj_id_col: 새로운 객체 ID로 채워진 배열
+                # new_request_times_col: 새로운 요청 시간 리스트
                 tmp_df = pd.DataFrame({'object_ID': new_obj_id_col, 'request_time': new_request_times_col})
 
                 # 기존 요청 데이터와 병합
@@ -189,35 +226,58 @@ def generate_session_requests(zipalpha, distr):
     objects_zipf_pdf = generate_object_popularity_zipf(zipalpha)
 
     # 최소 인기 객체에 대한 요청 수를 기반으로 최대 시뮬레이션 시간 계산
-    simulation_time_end = 0
-    N = NUM_OF_OBJECTS - 1
-    reqs_N = int(math.ceil(objects_zipf_pdf[N][1] * NUM_OF_REQUESTS_PER_SESSION))
-    ctr = 0
-    cur_t = 0
-    while ctr < reqs_N:
-        rand = np.random.uniform()
-        if distr == 'P':
+    simulation_time_end = 0  # 시뮬레이션의 종료 시간을 저장할 변수 초기화
+    N = NUM_OF_OBJECTS - 1  # 최소 인기 객체의 인덱스 (객체는 0부터 NUM_OF_OBJECTS-1까지 존재)
+    reqs_N = int(math.ceil(objects_zipf_pdf[N][1] * NUM_OF_REQUESTS_PER_SESSION))  
+    # 최소 인기 객체에 대한 요청 수를 계산
+    # objects_zipf_pdf[N][1]: 최소 인기 객체의 Zipf 분포 확률 값
+    # NUM_OF_REQUESTS_PER_SESSION: 세션당 총 요청 수
+    # 최소 인기 객체의 요청 수는 전체 요청 수에 이 확률 값을 곱한 값으로 계산됨
+
+    ctr = 0  # 현재까지 생성된 요청 수를 추적하는 변수
+    cur_t = 0  # 현재 요청 시간 (시뮬레이션 시간)
+
+    # 최소 인기 객체에 대해 요청을 생성
+    while ctr < reqs_N:  # 최소 인기 객체의 요청 수(reqs_N)가 생성될 때까지 반복
+        rand = np.random.uniform()  # 0과 1 사이의 난수를 생성 (확률 분포 샘플링에 사용)
+        
+        # 요청 간격을 Poisson 또는 Pareto 분포를 사용하여 생성
+        if distr == 'P':  # 분포가 Poisson인 경우
+            # Poisson 분포의 CDF를 사용하여 요청 간격 t를 생성
             t = generate_poisson_distribution_from_CDF(rand, objects_zipf_pdf[N][1])
-        elif distr == 'R':
+        elif distr == 'R':  # 분포가 Pareto인 경우
+            # Pareto 분포의 CDF를 사용하여 요청 간격 t를 생성
             t = generate_pareto_distribution_from_CDF(rand, objects_zipf_pdf[N][1])
-        ctr += 1
-        cur_t += t
-        simulation_time_end = cur_t
-        req_str = str(N+1) + ',' + str(cur_t)
-        requests.append(req_str)
+        
+        ctr += 1  # 생성된 요청 수를 1 증가
+        cur_t += t  # 현재 요청 시간에 생성된 요청 간격 t를 더함
+        simulation_time_end = cur_t  # 시뮬레이션 종료 시간을 현재 요청 시간으로 갱신
+        
+        # 요청 데이터를 문자열로 생성 (객체 ID, 요청 시간)
+        req_str = str(N+1) + ',' + str(cur_t)  
+        # N+1: 객체 ID (1부터 시작), cur_t: 요청 시간
+        requests.append(req_str)  # 생성된 요청 데이터를 리스트에 추가
 
     # 나머지 객체에 대한 요청 생성
-    for i in range(NUM_OF_OBJECTS - 1):
-        cur_t = 0
-        while cur_t < simulation_time_end:
-            rand = np.random.uniform()
-            if distr == 'P':
+    for i in range(NUM_OF_OBJECTS - 1):  # 최소 인기 객체를 제외한 나머지 객체에 대해 반복
+        cur_t = 0  # 현재 객체의 요청 시간을 초기화
+        while cur_t < simulation_time_end:  # 시뮬레이션 종료 시간까지 요청을 생성
+            rand = np.random.uniform()  # 0과 1 사이의 난수를 생성 (확률 분포 샘플링에 사용)
+            
+            # 요청 간격을 Poisson 또는 Pareto 분포를 사용하여 생성
+            if distr == 'P':  # 분포가 Poisson인 경우
+                # Poisson 분포의 CDF를 사용하여 요청 간격 t를 생성
                 t = generate_poisson_distribution_from_CDF(rand, objects_zipf_pdf[i][1])
-            elif distr == 'R':
+            elif distr == 'R':  # 분포가 Pareto인 경우
+                # Pareto 분포의 CDF를 사용하여 요청 간격 t를 생성
                 t = generate_pareto_distribution_from_CDF(rand, objects_zipf_pdf[i][1])
-            cur_t += t
-            req_str = str(i+1) + ',' + str(cur_t)
-            requests.append(req_str)
+            
+            cur_t += t  # 현재 요청 시간에 생성된 요청 간격 t를 더함
+            
+            # 요청 데이터를 문자열로 생성 (객체 ID, 요청 시간)
+            req_str = str(i+1) + ',' + str(cur_t)  
+            # i+1: 객체 ID (1부터 시작), cur_t: 요청 시간
+            requests.append(req_str)  # 생성된 요청 데이터를 리스트에 추가
 
     requests = sorted(requests, key=lambda a: float(a.split(',')[1]))
     return requests
@@ -228,7 +288,7 @@ def generate_poisson_distribution_from_CDF(rand, lambda_poisson):
     Poisson 분포를 사용하여 요청 간격을 생성하는 함수.
     
     매개변수:
-    - rand: 0과 1 사이의 난수.
+    - rand: 0과 1 사이의 난수를 생성.
     - lambda_poisson: Poisson 분포의 lambda 값.
     
     주요 작업:
@@ -242,7 +302,7 @@ def generate_pareto_distribution_from_CDF(rand, lambda_pareto):
     Pareto 분포를 사용하여 요청 간격을 생성하는 함수.
     
     매개변수:
-    - rand: 0과 1 사이의 난수.
+    - rand: 0과 1 사이의 난수를 생성.
     - lambda_pareto: Pareto 분포의 lambda 값.
     
     주요 작업:
