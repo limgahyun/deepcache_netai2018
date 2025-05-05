@@ -67,6 +67,13 @@ def generate_requests():
     """
     요청 데이터를 생성하는 함수.
     각 세션에 대해 객체의 순위와 요청 간격 분포를 변경하며 요청 데이터를 생성합니다.
+    
+    주요 작업:
+    1. 각 세션에 대해 Zipf 분포의 alpha 값을 기반으로 요청 데이터를 생성.
+    2. 세션 간 객체의 순위를 무작위로 변경.
+    3. 이전 세션의 마지막 요청 시간 이후부터 요청 시간을 조정.
+    4. 모든 요청 데이터를 하나의 데이터프레임에 병합하고 정렬.
+    5. 결과를 CSV 파일로 저장.
     """
     print('데이터셋 요청 생성 중...')
     for i in range(len(alphaSet)):
@@ -140,7 +147,13 @@ def generate_requests():
 def generate_object_popularity_zipf(zipalpha):
     """
     Zipf 분포를 사용하여 객체의 인기도를 생성하는 함수.
-    zipalpha: Zipf 분포의 alpha 값.
+    
+    매개변수:
+    - zipalpha: Zipf 분포의 alpha 값.
+    
+    주요 작업:
+    1. Zipf 분포를 기반으로 각 객체의 인기도를 계산.
+    2. 객체 ID와 해당 인기도를 반환.
     """
     N = NUM_OF_OBJECTS
     denom = 0.0
@@ -160,8 +173,15 @@ def generate_object_popularity_zipf(zipalpha):
 def generate_session_requests(zipalpha, distr):
     """
     세션 요청 데이터를 생성하는 함수.
-    zipalpha: Zipf 분포의 alpha 값.
-    distr: 요청 간격 분포 (Poisson 또는 Pareto).
+    
+    매개변수:
+    - zipalpha: Zipf 분포의 alpha 값.
+    - distr: 요청 간격 분포 (Poisson 또는 Pareto).
+    
+    주요 작업:
+    1. Zipf 분포를 기반으로 객체의 인기도를 생성.
+    2. 각 객체에 대해 요청 간격을 생성 (Poisson 또는 Pareto 분포 사용).
+    3. 요청 데이터를 시간 순서대로 정렬하여 반환.
     """
     requests = []
 
@@ -205,18 +225,28 @@ def generate_session_requests(zipalpha, distr):
 
 def generate_poisson_distribution_from_CDF(rand, lambda_poisson):
     """
-    Poisson 분포를 사용하여 숫자를 생성하는 함수.
-    rand: 0과 1 사이의 난수.
-    lambda_poisson: Poisson 분포의 lambda 값.
+    Poisson 분포를 사용하여 요청 간격을 생성하는 함수.
+    
+    매개변수:
+    - rand: 0과 1 사이의 난수.
+    - lambda_poisson: Poisson 분포의 lambda 값.
+    
+    주요 작업:
+    1. Poisson 분포의 CDF를 역으로 계산하여 요청 간격을 생성.
     """
     return -1 * (math.log(1-rand))/lambda_poisson
 
 
 def generate_pareto_distribution_from_CDF(rand, lambda_pareto):
     """
-    Pareto 분포를 사용하여 숫자를 생성하는 함수.
-    rand: 0과 1 사이의 난수.
-    lambda_pareto: Pareto 분포의 lambda 값.
+    Pareto 분포를 사용하여 요청 간격을 생성하는 함수.
+    
+    매개변수:
+    - rand: 0과 1 사이의 난수.
+    - lambda_pareto: Pareto 분포의 lambda 값.
+    
+    주요 작업:
+    1. Pareto 분포의 CDF를 역으로 계산하여 요청 간격을 생성.
     """
     # Pareto 분포의 beta 값은 2로 설정
     return (1/math.sqrt(1-rand) - 1)/lambda_pareto
@@ -226,6 +256,10 @@ def generate_pareto_distribution_from_CDF(rand, lambda_pareto):
 
 
 def main():
+    """
+    스크립트의 진입점 함수.
+    요청 데이터를 생성하는 generate_requests() 함수를 호출합니다.
+    """
     generate_requests()
 
 if __name__ == "__main__": main()
